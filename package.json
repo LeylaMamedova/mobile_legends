@@ -1,0 +1,19 @@
+{
+  "name": "mobile-moba",
+  "version": "1.0.0",
+  "description": "Local multiplayer MOBA — deployable on Railway",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "test": "node test/integration.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
+  }
+}
