@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <title>MOBA Arena</title>
-  <link rel="stylesheet" href="/css/style.css?v=4">
+  <link rel="stylesheet" href="/css/style.css?v=5">
 </head>
 <body>
   <div id="lobby-screen">
@@ -48,36 +48,49 @@
   <div id="game-screen" class="hidden">
     <canvas id="game-canvas"></canvas>
     <div id="world-labels"></div>
-    <canvas id="minimap" width="110" height="74"></canvas>
-    <div id="damage-flash" class="hidden"></div>
-    <div id="hud">
-      <div id="hud-left">
-        <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
-        <span class="hud-stat" id="hp-text">HP</span>
-        <span class="hud-stat" id="gold-text">Gold: 0</span>
+
+    <!-- MLBB-style HUD -->
+    <div id="mlbb-hud">
+      <div id="top-bar">
+        <span id="kda-text">0 / 0</span>
+        <span id="timer-text">0:00</span>
+        <span id="gold-text">300</span>
       </div>
+
+      <div id="minimap-wrap">
+        <canvas id="minimap" width="120" height="80"></canvas>
+      </div>
+
+      <div id="kill-feed"></div>
+
       <div id="hud-center">
         <div id="danger-warning" class="hidden"></div>
         <div id="respawn-timer" class="hidden"><span id="respawn-text"></span></div>
       </div>
-      <div id="hud-right">
-        <span class="hud-stat" id="timer-text">0:00</span>
-        <span class="hud-stat" id="kda-text">0 / 0</span>
-      </div>
-    </div>
-    <div id="kill-feed"></div>
-    <div id="controls">
-      <div id="joystick-zone">
-        <div id="joystick-base">
-          <div id="joystick-knob"></div>
+
+      <div id="bottom-hud">
+        <div id="hero-panel">
+          <div id="hero-portrait" class="fighter-portrait"></div>
+          <div id="hero-bars">
+            <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
+            <span class="hp-text" id="hp-text">1200 / 1200</span>
+          </div>
+        </div>
+
+        <div id="controls">
+          <div id="joystick-zone">
+            <div id="joystick-base"><div id="joystick-knob"></div></div>
+          </div>
+          <div id="skill-buttons">
+            <button class="skill-btn" id="skill2-btn">S2</button>
+            <button class="skill-btn" id="skill1-btn">S1</button>
+            <button class="skill-btn attack" id="attack-btn">⚔</button>
+          </div>
         </div>
       </div>
-      <div id="skill-buttons">
-        <button class="skill-btn" id="skill1-btn" data-skill="1">S1</button>
-        <button class="skill-btn" id="skill2-btn" data-skill="2">S2</button>
-        <button class="skill-btn attack" id="attack-btn" data-skill="attack">ATK</button>
-      </div>
     </div>
+
+    <div id="damage-flash" class="hidden"></div>
     <div id="death-overlay" class="hidden">
       <div class="death-card">
         <h2>YOU DIED</h2>
@@ -93,10 +106,10 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="/js/network.js?v=4"></script>
-  <script src="/js/input.js?v=4"></script>
-  <script src="/js/renderer.js?v=4"></script>
-  <script src="/js/lobby.js?v=4"></script>
-  <script src="/js/game.js?v=4"></script>
+  <script src="/js/network.js?v=5"></script>
+  <script src="/js/input.js?v=5"></script>
+  <script src="/js/renderer.js?v=5"></script>
+  <script src="/js/lobby.js?v=5"></script>
+  <script src="/js/game.js?v=5"></script>
 </body>
 </html>

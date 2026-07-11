@@ -165,8 +165,11 @@ class GameApp {
     const hpRatio = hero.hp / hero.maxHp;
     document.getElementById('hp-bar').style.width = `${hpRatio * 100}%`;
     document.getElementById('hp-text').textContent = `${Math.ceil(hero.hp)} / ${hero.maxHp}`;
-    document.getElementById('gold-text').textContent = `Gold: ${hero.gold}`;
+    document.getElementById('gold-text').textContent = hero.gold;
     document.getElementById('kda-text').textContent = `${hero.kills} / ${hero.deaths}`;
+
+    const portrait = document.getElementById('hero-portrait');
+    portrait.className = hero.heroType === 'mage' ? 'mage-portrait' : 'fighter-portrait';
 
     const mins = Math.floor(this.state.matchTime / 60);
     const secs = this.state.matchTime % 60;
