@@ -20,6 +20,10 @@ class GameRenderer {
   }
 
   _initThree() {
+    if (typeof THREE === 'undefined') {
+      console.error('Three.js failed to load');
+      return;
+    }
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87ceeb);
     this.scene.fog = new THREE.Fog(0x87ceeb, 60, 120);
@@ -29,11 +33,11 @@ class GameRenderer {
     this.camera.position.set(45, 38, 55);
     this.camera.lookAt(45, 0, 30);
 
-    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.gl = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
+    this.gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.gl.setSize(window.innerWidth, window.innerHeight);
+    this.gl.shadowMap.enabled = true;
+    this.gl.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.ambient = new THREE.AmbientLight(0xffffff, 0.55);
     this.scene.add(this.ambient);
@@ -66,7 +70,11 @@ class GameRenderer {
     const h = window.innerHeight;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h);
+    if (this.gl) this.gl.setSize(w, h);
+  }
+
+  resize() {
+    this._onResize();
   }
 
   setMap(map) {
@@ -297,7 +305,7 @@ class GameRenderer {
       mesh.position.set(pos.x, 0, pos.y);
       mesh.visible = h.alive;
       if (h.playerId === this.myPlayerId && h.alive) {
-        this.cameraTarget.lerp(new THREE.Vector3(pos.x, 0, pos.y), 0.08);
+        this.cameraTarget.set(pos.x, 0, pos.y);
         this.heroLight.position.set(pos.x, 2, pos.y);
         this.heroLight.intensity = 0.6;
       }
@@ -343,7 +351,7 @@ class GameRenderer {
     const tz = this.cameraTarget.z;
     const camX = tx + 8;
     const camZ = tz + 22;
-    this.camera.position.lerp(new THREE.Vector3(camX, 32, camZ), 0.06);
+    this.camera.position.set(camX, 32, camZ);
     this.camera.lookAt(tx, 0, tz);
   }
 
@@ -470,8 +478,8 @@ class GameRenderer {
     }
   }
 
-  _drawMinimap() {
-    if (!this.state || !this.map) return;
+  render(alpha = 1) {
+    if (!this.state || !this.map || !this.gl) return;
     const now = performance.now();
     const dt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
@@ -485,7 +493,7 @@ class GameRenderer {
     this._updateCamera();
     this._drawAttackBeams(dt);
     this._updateEffects(dt);
-    this.renderer.render(this.scene, this.camera);
+    this.gl.render(this.scene, this.camera);
     this._updateLabels();
     this._drawMinimap();
   }

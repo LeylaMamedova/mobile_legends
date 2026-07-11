@@ -80,6 +80,7 @@ class GameApp {
     this.renderer.setState(state);
     this.running = true;
     this.wasAlive = true;
+    requestAnimationFrame(() => this.renderer.resize());
   }
 
   _onStateUpdate() {
