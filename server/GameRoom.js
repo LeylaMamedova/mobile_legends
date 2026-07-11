@@ -64,6 +64,8 @@ const TICK_RATE = 20;
 const BROADCAST_RATE = 12;
 const MINION_WAVE_INTERVAL = 25;
 const RESPAWN_TIME = 8;
+const MAX_PLAYERS = 4;
+const BOT_NAMES = ['Bot Layla', 'Bot Franco', 'Bot Eudora', 'Bot Aldous'];
 
 function dist(a, b) {
   const dx = a.x - b.x;
@@ -147,20 +149,26 @@ class GameRoom {
 
   addPlayer(playerId, ws, name) {
     if (this.started) return { ok: false, error: 'Match already started' };
-    if (this.players.size >= 4) return { ok: false, error: 'Room is full (max 4 players)' };
+    const humans = this._humanCount();
+    if (humans >= MAX_PLAYERS) return { ok: false, error: 'Room is full (max 4 players)' };
 
     const team = this._assignTeam();
     this.players.set(playerId, {
       id: playerId,
-      name: name || `Player${this.players.size + 1}`,
+      name: name || `Player${humans + 1}`,
       team,
       heroType: HeroType.FIGHTER,
       ready: false,
-      slot: this.players.size
+      slot: this.players.size,
+      isBot: false
     });
     this.connections.set(playerId, ws);
     this.heroTypeSelections.set(playerId, HeroType.FIGHTER);
     return { ok: true, team };
+  }
+
+  _humanCount() {
+    return [...this.players.values()].filter((p) => !p.isBot).length;
   }
 
   _assignTeam() {
@@ -180,7 +188,7 @@ class GameRoom {
   setHeroType(playerId, heroType) {
     if (!HERO_STATS[heroType]) return false;
     const player = this.players.get(playerId);
-    if (!player || this.started) return false;
+    if (!player || this.started || player.isBot) return false;
     player.heroType = heroType;
     this.heroTypeSelections.set(playerId, heroType);
     return true;
@@ -188,18 +196,39 @@ class GameRoom {
 
   setReady(playerId, ready) {
     const player = this.players.get(playerId);
-    if (!player || this.started) return false;
+    if (!player || this.started || player.isBot) return false;
     player.ready = ready;
     return true;
   }
 
   canStart() {
-    if (this.players.size < 2) return false;
-    return [...this.players.values()].every((p) => p.ready);
+    const humans = [...this.players.values()].filter((p) => !p.isBot);
+    if (humans.length < 1) return false;
+    return humans.every((p) => p.ready);
+  }
+
+  _fillBots() {
+    let botIndex = 0;
+    while (this.players.size < MAX_PLAYERS) {
+      const botId = `bot_${++this.idCounter}`;
+      const team = this._assignTeam();
+      const heroType = botIndex % 2 === 0 ? HeroType.FIGHTER : HeroType.MAGE;
+      this.players.set(botId, {
+        id: botId,
+        name: BOT_NAMES[botIndex % BOT_NAMES.length],
+        team,
+        heroType,
+        ready: true,
+        slot: this.players.size,
+        isBot: true
+      });
+      botIndex += 1;
+    }
   }
 
   startMatch() {
     if (!this.canStart()) return false;
+    this._fillBots();
     this.started = true;
     this.matchTime = 0;
     this.minionWaveTimer = 8;
@@ -398,6 +427,10 @@ class GameRoom {
 
     for (const hero of this.entities.heroes) {
       if (hero.alive) {
+        const player = this.players.get(hero.playerId);
+        if (player?.isBot) {
+          this._updateBot(hero, dt);
+        }
         this._moveHero(hero, dt);
         hero.attackCooldownLeft = Math.max(0, hero.attackCooldownLeft - dt);
         hero.skill1CooldownLeft = Math.max(0, hero.skill1CooldownLeft - dt);
@@ -431,6 +464,7 @@ class GameRoom {
 
   _respawnHero(hero) {
     const player = this.players.get(hero.playerId);
+    if (!player) return;
     const spawns = SPAWN_POINTS[player.team];
     const spawn = spawns[hero.slot % spawns.length] || spawns[0];
     hero.x = spawn.x;
@@ -438,6 +472,86 @@ class GameRoom {
     hero.hp = hero.maxHp;
     hero.alive = true;
     hero.respawnTimer = 0;
+  }
+
+  _updateBot(hero, dt) {
+    const player = this.players.get(hero.playerId);
+    if (!player?.isBot) return;
+
+    const enemyBaseX = hero.team === Team.BLUE ? 87 : 3;
+    const enemyBaseY = 30;
+    const nearestEnemy = this._findTarget(hero, 10, hero.team);
+    const lowHp = hero.hp / hero.maxHp < 0.35;
+    const inTowerDanger = this._isInEnemyTowerRange(hero);
+    const hasMinionCover = this._hasFriendlyMinionsNearby(hero, 6);
+
+    if (lowHp) {
+      const spawn = SPAWN_POINTS[hero.team][hero.slot % 4];
+      this._botMoveToward(hero, spawn.x, spawn.y);
+      return;
+    }
+
+    if (nearestEnemy && dist(hero, nearestEnemy) <= hero.attackRange + 0.5) {
+      this._heroAttack(hero);
+      if (hero.skill1CooldownLeft <= 0 && dist(hero, nearestEnemy) <= hero.attackRange + 2) {
+        this._heroSkill(hero, 1);
+      }
+      if (hero.skill2CooldownLeft <= 0 && dist(hero, nearestEnemy) <= 4) {
+        this._heroSkill(hero, 2);
+      }
+    }
+
+    if (nearestEnemy && dist(hero, nearestEnemy) < 12) {
+      if (!(inTowerDanger && !hasMinionCover)) {
+        this._botMoveToward(hero, nearestEnemy.x, nearestEnemy.y);
+        return;
+      }
+    }
+
+    if (inTowerDanger && !hasMinionCover) {
+      hero.input.dx = 0;
+      hero.input.dy = 0;
+      const retreat = SPAWN_POINTS[hero.team][hero.slot % 4];
+      if (dist(hero, retreat) > 5) this._botMoveToward(hero, retreat.x, retreat.y);
+      return;
+    }
+
+    const lane = MAP.lanes.find((l) => l.id === hero.lane) || MAP.lanes[1];
+    const pushX = hero.team === Team.BLUE ? lane.waypoints[2].x - 5 : lane.waypoints[0].x + 5;
+    const pushY = lane.y;
+    this._botMoveToward(hero, pushX, pushY);
+
+    if (dist(hero, { x: enemyBaseX, y: enemyBaseY }) < 15) {
+      const base = this.entities.bases.find((b) => b.alive && b.team !== hero.team);
+      if (base && hasMinionCover) this._botMoveToward(hero, base.x, base.y);
+    }
+  }
+
+  _botMoveToward(hero, tx, ty) {
+    const dx = tx - hero.x;
+    const dy = ty - hero.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.4) {
+      hero.input.dx = 0;
+      hero.input.dy = 0;
+      return;
+    }
+    hero.input.dx = dx / len;
+    hero.input.dy = dy / len;
+  }
+
+  _isInEnemyTowerRange(hero) {
+    for (const tower of this.entities.towers) {
+      if (!tower.alive || tower.team === hero.team) continue;
+      if (dist(hero, tower) <= tower.attackRange) return true;
+    }
+    return false;
+  }
+
+  _hasFriendlyMinionsNearby(hero, radius = 5) {
+    return this.entities.minions.some(
+      (m) => m.alive && m.team === hero.team && dist(hero, m) <= radius
+    );
   }
 
   _spawnMinionWave() {
@@ -513,8 +627,10 @@ class GameRoom {
         name: p.name,
         team: p.team,
         heroType: p.heroType,
-        ready: p.ready
-      }))
+        ready: p.ready,
+        isBot: !!p.isBot
+      })),
+      botFill: Math.max(0, MAX_PLAYERS - this.players.size)
     };
   }
 
@@ -546,7 +662,8 @@ class GameRoom {
         skill1CooldownLeft: h.skill1CooldownLeft,
         skill2CooldownLeft: h.skill2CooldownLeft,
         lastHitBy: h.lastHitBy,
-        lastHitType: h.lastHitType
+        lastHitType: h.lastHitType,
+        isBot: !!this.players.get(h.playerId)?.isBot
       })),
       minions: this.entities.minions.filter((m) => m.alive).map((m) => ({
         id: m.id, team: m.team, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, alive: m.alive

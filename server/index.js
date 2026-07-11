@@ -109,7 +109,7 @@ wss.on('connection', (ws) => {
     room.removePlayer(playerId);
     playerRoom.delete(playerId);
     broadcastRoom(room, 'lobby_update', room.getLobbyState());
-    if (room.players.size === 0) rooms.delete(roomId);
+    if (room._humanCount() === 0) rooms.delete(roomId);
   });
 });
 

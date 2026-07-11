@@ -54,11 +54,24 @@ function updateLobby(lobby) {
   for (const p of lobby.players) {
     const li = document.createElement('li');
     const teamClass = p.team === 'blue' ? 'team-blue' : 'team-red';
+    const botTag = p.isBot ? ' 🤖' : '';
     li.innerHTML = `
-      <span><span class="${teamClass}">${p.team.toUpperCase()}</span> · ${p.name} (${p.heroType})</span>
-      <span class="badge ${p.ready ? 'ready' : ''}">${p.ready ? 'Ready' : 'Waiting'}</span>
+      <span><span class="${teamClass}">${p.team.toUpperCase()}</span> · ${p.name}${botTag} (${p.heroType})</span>
+      <span class="badge ${p.ready ? 'ready' : ''}">${p.isBot ? 'Bot' : p.ready ? 'Ready' : 'Waiting'}</span>
     `;
     playerList.appendChild(li);
+  }
+  const hint = document.getElementById('lobby-hint');
+  if (hint) {
+    const humans = lobby.players.filter((p) => !p.isBot).length;
+    const bots = lobby.botFill || Math.max(0, 4 - lobby.players.length);
+    if (humans === 1) {
+      hint.textContent = `Solo mode — ${bots} bot(s) will join when you Ready`;
+    } else if (bots > 0) {
+      hint.textContent = `${humans} player(s) — ${bots} bot(s) fill on start`;
+    } else {
+      hint.textContent = 'All players ready to start!';
+    }
   }
 }
 

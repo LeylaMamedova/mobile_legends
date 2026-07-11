@@ -586,7 +586,8 @@ class GameRenderer {
       div.style.top = `${sy}px`;
       const teamClass = u.team === 'blue' ? 'team-blue' : 'team-red';
       if (u.type === 'hero') {
-        div.innerHTML = `<span class="label-name ${teamClass}">${u.name}</span>
+        const botTag = u.isBot ? ' 🤖' : '';
+        div.innerHTML = `<span class="label-name ${teamClass}">${u.name}${botTag}</span>
           <div class="label-hp"><div class="label-hp-fill" style="width:${ratio * 100}%"></div></div>`;
         if (u.playerId === this.myPlayerId) div.classList.add('label-me');
       } else {
