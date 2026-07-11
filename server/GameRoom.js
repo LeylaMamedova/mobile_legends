@@ -61,6 +61,7 @@ const SPAWN_POINTS = {
 };
 
 const TICK_RATE = 20;
+const BROADCAST_RATE = 12;
 const MINION_WAVE_INTERVAL = 25;
 const RESPAWN_TIME = 8;
 
@@ -93,6 +94,9 @@ class GameRoom {
     this.entities = { heroes: [], minions: [], towers: [], bases: [] };
     this.idCounter = 0;
     this.killFeed = [];
+    this.damageEvents = [];
+    this.deathEvents = [];
+    this.attackEvents = [];
     this._initStructures();
   }
 
@@ -308,6 +312,31 @@ class GameRoom {
 
   _dealDamage(attacker, target, amount) {
     if (!target || !target.alive) return;
+
+    const dealt = Math.round(amount);
+    this.damageEvents.push({
+      targetId: target.id,
+      amount: dealt,
+      x: target.x,
+      y: target.y,
+      attackerType: attacker.type,
+      attackerName: this._entityLabel(attacker)
+    });
+
+    if (target.type === 'hero') {
+      target.lastHitBy = this._entityLabel(attacker);
+      target.lastHitType = attacker.type;
+    }
+
+    this.attackEvents.push({
+      fromX: attacker.x,
+      fromY: attacker.y,
+      toX: target.x,
+      toY: target.y,
+      team: attacker.team,
+      kind: attacker.type === 'tower' ? 'tower' : attacker.type === 'hero' ? 'hero' : 'minion'
+    });
+
     target.hp -= amount;
     if (target.hp <= 0) {
       target.hp = 0;
@@ -319,6 +348,14 @@ class GameRoom {
           attacker.kills += 1;
           attacker.gold += 200;
         }
+        this.deathEvents.push({
+          playerId: target.playerId,
+          name: target.name,
+          killedBy: this._entityLabel(attacker),
+          killedByType: attacker.type,
+          x: target.x,
+          y: target.y
+        });
         this._pushKillFeed(attacker, target);
       } else if (target.type === 'minion' && attacker.type === 'hero') {
         attacker.gold += 40;
@@ -330,6 +367,14 @@ class GameRoom {
         this._pushKillFeed(attacker, target, true);
       }
     }
+  }
+
+  _entityLabel(entity) {
+    if (entity.type === 'hero') return entity.name;
+    if (entity.type === 'tower') return 'Tower';
+    if (entity.type === 'minion') return 'Minion';
+    if (entity.type === 'base') return 'Base';
+    return entity.type;
   }
 
   _pushKillFeed(killer, victim, isBase = false) {
@@ -473,20 +518,59 @@ class GameRoom {
     };
   }
 
-  getGameState() {
-    return {
+  getGameState(includeMap = false) {
+    const state = {
       roomId: this.id,
       matchTime: Math.floor(this.matchTime),
       started: this.started,
       finished: this.finished,
       winner: this.winner,
-      map: MAP,
-      heroes: this.entities.heroes,
-      minions: this.entities.minions.filter((m) => m.alive),
-      towers: this.entities.towers,
-      bases: this.entities.bases,
-      killFeed: this.killFeed
+      heroes: this.entities.heroes.map((h) => ({
+        id: h.id,
+        playerId: h.playerId,
+        name: h.name,
+        heroType: h.heroType,
+        team: h.team,
+        x: h.x,
+        y: h.y,
+        hp: h.hp,
+        maxHp: h.maxHp,
+        attackRange: h.attackRange,
+        alive: h.alive,
+        respawnTimer: h.respawnTimer,
+        gold: h.gold,
+        kills: h.kills,
+        deaths: h.deaths,
+        color: h.color,
+        attackCooldownLeft: h.attackCooldownLeft,
+        skill1CooldownLeft: h.skill1CooldownLeft,
+        skill2CooldownLeft: h.skill2CooldownLeft,
+        lastHitBy: h.lastHitBy,
+        lastHitType: h.lastHitType
+      })),
+      minions: this.entities.minions.filter((m) => m.alive).map((m) => ({
+        id: m.id, team: m.team, x: m.x, y: m.y, hp: m.hp, maxHp: m.maxHp, alive: m.alive
+      })),
+      towers: this.entities.towers.map((t) => ({
+        id: t.id, team: t.team, lane: t.lane, x: t.x, y: t.y,
+        hp: t.hp, maxHp: t.maxHp, attackRange: t.attackRange, alive: t.alive
+      })),
+      bases: this.entities.bases.map((b) => ({
+        id: b.id, team: b.team, x: b.x, y: b.y, hp: b.hp, maxHp: b.maxHp, alive: b.alive
+      })),
+      killFeed: this.killFeed,
+      damageEvents: this.damageEvents,
+      deathEvents: this.deathEvents,
+      attackEvents: this.attackEvents
     };
+
+    if (includeMap) state.map = MAP;
+
+    this.damageEvents = [];
+    this.deathEvents = [];
+    this.attackEvents = [];
+
+    return state;
   }
 }
 
@@ -496,5 +580,6 @@ module.exports = {
   HeroType,
   HERO_STATS,
   MAP,
-  TICK_RATE
+  TICK_RATE,
+  BROADCAST_RATE
 };

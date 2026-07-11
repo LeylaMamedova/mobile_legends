@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Mobile MOBA</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=2">
 </head>
 <body>
   <div id="lobby-screen">
@@ -47,11 +47,16 @@
 
   <div id="game-screen" class="hidden">
     <canvas id="game-canvas"></canvas>
+    <div id="damage-flash" class="hidden"></div>
     <div id="hud">
       <div id="hud-left">
         <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
         <span class="hud-stat" id="hp-text">HP</span>
         <span class="hud-stat" id="gold-text">Gold: 0</span>
+      </div>
+      <div id="hud-center">
+        <div id="danger-warning" class="hidden"></div>
+        <div id="respawn-timer" class="hidden"><span id="respawn-text"></span></div>
       </div>
       <div id="hud-right">
         <span class="hud-stat" id="timer-text">0:00</span>
@@ -71,16 +76,24 @@
         <button class="skill-btn attack" id="attack-btn" data-skill="attack">ATK</button>
       </div>
     </div>
+    <div id="death-overlay" class="hidden">
+      <div class="death-card">
+        <h2>YOU DIED</h2>
+        <p id="death-killer">Killed by: Unknown</p>
+        <p id="death-tip" class="death-tip"></p>
+        <button class="btn btn-secondary" id="death-dismiss">OK</button>
+      </div>
+    </div>
     <div id="match-end-overlay" class="hidden">
       <h2 id="match-result"></h2>
       <button class="btn" id="back-lobby-btn">Back to Lobby</button>
     </div>
   </div>
 
-  <script src="/js/network.js"></script>
-  <script src="/js/input.js"></script>
-  <script src="/js/renderer.js"></script>
-  <script src="/js/lobby.js"></script>
-  <script src="/js/game.js"></script>
+  <script src="/js/network.js?v=2"></script>
+  <script src="/js/input.js?v=2"></script>
+  <script src="/js/renderer.js?v=2"></script>
+  <script src="/js/lobby.js?v=2"></script>
+  <script src="/js/game.js?v=2"></script>
 </body>
 </html>

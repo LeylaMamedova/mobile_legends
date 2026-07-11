@@ -218,6 +218,88 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   pointer-events: none;
+  z-index: 10;
+}
+
+#hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+#danger-warning {
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+  animation: pulse-danger 0.8s infinite;
+  text-align: center;
+}
+
+#respawn-timer {
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 8px 20px;
+  border-radius: 8px;
+}
+
+@keyframes pulse-danger {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+#damage-flash {
+  position: absolute;
+  inset: 0;
+  background: #ef4444;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.1s;
+}
+
+#death-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.death-card {
+  background: #161b22;
+  border: 2px solid #ef4444;
+  border-radius: 16px;
+  padding: 28px 32px;
+  text-align: center;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.death-card h2 {
+  color: #ef4444;
+  font-size: 1.8rem;
+}
+
+.death-card #death-killer {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.death-tip {
+  color: #8b949e;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 #hud-left,
@@ -228,18 +310,18 @@ body {
 }
 
 .hp-bar-wrap {
-  width: 160px;
-  height: 14px;
+  width: 180px;
+  height: 18px;
   background: #21262d;
-  border-radius: 7px;
+  border-radius: 9px;
   overflow: hidden;
-  border: 1px solid #30363d;
+  border: 2px solid #30363d;
 }
 
 .hp-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #238636, #3fb950);
-  transition: width 0.1s;
+  background: linear-gradient(90deg, #16a34a, #4ade80);
+  transition: width 0.15s;
 }
 
 .hud-stat {
@@ -276,10 +358,10 @@ body {
 
 #joystick-zone {
   position: absolute;
-  left: 20px;
-  bottom: 20px;
-  width: 140px;
-  height: 140px;
+  left: 24px;
+  bottom: 24px;
+  width: 150px;
+  height: 150px;
   pointer-events: auto;
 }
 
@@ -287,22 +369,24 @@ body {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  border: 3px solid rgba(255, 255, 255, 0.25);
   position: relative;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
 #joystick-knob {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: rgba(88, 166, 255, 0.6);
-  border: 2px solid rgba(88, 166, 255, 0.9);
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.9), rgba(37, 99, 235, 0.7));
+  border: 2px solid rgba(255, 255, 255, 0.5);
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 #skill-buttons {
@@ -316,13 +400,13 @@ body {
 }
 
 .skill-btn {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  background: rgba(22, 27, 34, 0.85);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.5);
   color: #e6edf3;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -330,14 +414,15 @@ body {
   cursor: pointer;
   position: relative;
   touch-action: manipulation;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
 }
 
 .skill-btn.attack {
-  width: 72px;
-  height: 72px;
-  background: rgba(248, 81, 73, 0.35);
-  border-color: rgba(248, 81, 73, 0.7);
-  font-size: 0.8rem;
+  width: 78px;
+  height: 78px;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.6), rgba(185, 28, 28, 0.5));
+  border-color: rgba(239, 68, 68, 0.8);
+  font-size: 0.85rem;
 }
 
 .skill-btn.on-cooldown {

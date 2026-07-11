@@ -3,7 +3,7 @@ const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { v4: uuidv4 } = require('uuid');
-const { GameRoom, TICK_RATE } = require('./GameRoom');
+const { GameRoom, TICK_RATE, BROADCAST_RATE } = require('./GameRoom');
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -86,7 +86,7 @@ wss.on('connection', (ws) => {
         broadcastRoom(room, 'lobby_update', room.getLobbyState());
         if (room.canStart()) {
           room.startMatch();
-          broadcastRoom(room, 'match_start', room.getGameState());
+          broadcastRoom(room, 'match_start', room.getGameState(true));
         }
         break;
       }
@@ -113,22 +113,37 @@ wss.on('connection', (ws) => {
   });
 });
 
+let broadcastAccumulator = 0;
+const SIM_STEP = 1 / TICK_RATE;
+const BROADCAST_STEP = 1 / BROADCAST_RATE;
+
 setInterval(() => {
-  const dt = 1 / TICK_RATE;
+  broadcastAccumulator += SIM_STEP;
+
+  const dt = SIM_STEP;
+  let shouldBroadcast = false;
+
+  if (broadcastAccumulator >= BROADCAST_STEP) {
+    broadcastAccumulator = 0;
+    shouldBroadcast = true;
+  }
+
   for (const room of rooms.values()) {
     if (!room.started) continue;
     room.tick(dt);
-    broadcastRoom(room, 'state', room.getGameState());
+    if (shouldBroadcast) {
+      broadcastRoom(room, 'state', room.getGameState(false));
+    }
     if (room.finished && !room._matchEndSent) {
       room._matchEndSent = true;
       room.started = false;
       broadcastRoom(room, 'match_end', {
         winner: room.winner,
-        state: room.getGameState()
+        state: room.getGameState(false)
       });
     }
   }
-}, 1000 / TICK_RATE);
+}, SIM_STEP * 1000);
 
 server.listen(PORT, () => {
   console.log(`Mobile MOBA server running on port ${PORT}`);
