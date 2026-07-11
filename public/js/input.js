@@ -70,23 +70,19 @@ class VirtualJoystick {
 
 class SkillButtons {
   constructor(buttonIds) {
-    this.pending = { attack: false, skill1: false, skill2: false };
+    this.pending = { attack: false, skill1: false, skill2: false, recall: false };
     for (const [key, id] of Object.entries(buttonIds)) {
       const el = document.getElementById(id);
-      el.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.pending[key] = true;
-      });
-      el.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        this.pending[key] = true;
-      });
+      if (!el) continue;
+      const trigger = (e) => { e.preventDefault(); this.pending[key] = true; };
+      el.addEventListener('touchstart', trigger);
+      el.addEventListener('mousedown', trigger);
     }
   }
 
   consume() {
     const out = { ...this.pending };
-    this.pending = { attack: false, skill1: false, skill2: false };
+    this.pending = { attack: false, skill1: false, skill2: false, recall: false };
     return out;
   }
 }

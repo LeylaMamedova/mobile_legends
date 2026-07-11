@@ -96,6 +96,12 @@ wss.on('connection', (ws) => {
         room.handleInput(playerId, payload);
         break;
       }
+      case 'buy_item': {
+        const room = rooms.get(playerRoom.get(playerId));
+        if (!room || !room.started) return;
+        room.buyItem(playerId, payload.itemId);
+        break;
+      }
       default:
         send(ws, 'error', { message: `Unknown message type: ${type}` });
     }

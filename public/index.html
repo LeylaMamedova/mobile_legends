@@ -5,76 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <title>MOBA Arena</title>
-  <link rel="stylesheet" href="/css/style.css?v=5">
+  <link rel="stylesheet" href="/css/style.css?v=7">
 </head>
 <body>
+  <!-- LOBBY -->
   <div id="lobby-screen">
+    <div class="splash-bg"></div>
     <div class="logo">MOBA ARENA</div>
-    <p class="subtitle">5v5-style battles · Play in your browser</p>
+    <p class="subtitle">Classic MOBA · Play in Browser</p>
 
     <div class="card" id="join-card">
-      <label for="player-name">Your name</label>
+      <label>Player Name</label>
       <input id="player-name" type="text" placeholder="Enter name" maxlength="16" value="Player">
-
-      <label for="room-id">Room code (leave empty to create)</label>
-      <input id="room-id" type="text" placeholder="e.g. A1B2C3" maxlength="6">
-
-      <button class="btn btn-blue" id="join-btn">Join / Create Room</button>
+      <label>Room Code (empty = create)</label>
+      <input id="room-id" type="text" placeholder="ABC123" maxlength="6">
+      <button class="btn btn-gold" id="join-btn">ENTER</button>
       <p class="error-msg hidden" id="lobby-error"></p>
     </div>
 
     <div class="card hidden" id="room-card">
-      <p class="subtitle">Share this room code with friends:</p>
+      <p class="room-label">ROOM CODE</p>
       <p class="room-code" id="display-room-id">------</p>
 
-      <div class="hero-select">
-        <div class="hero-card selected" data-hero="fighter">
-          <div class="hero-name">Fighter</div>
-          <div class="hero-desc">Melee · High HP</div>
-        </div>
-        <div class="hero-card" data-hero="mage">
-          <div class="hero-name">Mage</div>
-          <div class="hero-desc">Ranged · Burst</div>
-        </div>
-      </div>
+      <p class="section-title">SELECT HERO</p>
+      <div class="hero-grid" id="hero-grid"></div>
 
       <ul class="player-list" id="player-list"></ul>
-
-      <button class="btn" id="ready-btn">Ready</button>
-      <p class="subtitle" id="lobby-hint">Play solo or with friends — bots fill empty slots</p>
+      <button class="btn btn-gold" id="ready-btn">BATTLE!</button>
+      <p class="subtitle" id="lobby-hint">Bots fill empty slots</p>
     </div>
   </div>
 
+  <!-- GAME -->
   <div id="game-screen" class="hidden">
     <canvas id="game-canvas"></canvas>
     <div id="world-labels"></div>
 
-    <!-- MLBB-style HUD -->
     <div id="mlbb-hud">
-      <div id="top-bar">
-        <span id="kda-text">0 / 0</span>
-        <span id="timer-text">0:00</span>
-        <span id="gold-text">300</span>
+      <!-- Top score bar like MLBB -->
+      <div id="score-bar">
+        <div class="score-team blue-team">
+          <span class="score-num" id="blue-kills">0</span>
+        </div>
+        <div id="timer-box">
+          <span id="timer-text">00:00</span>
+        </div>
+        <div class="score-team red-team">
+          <span class="score-num" id="red-kills">0</span>
+        </div>
       </div>
 
       <div id="minimap-wrap">
-        <canvas id="minimap" width="120" height="80"></canvas>
+        <canvas id="minimap" width="130" height="88"></canvas>
       </div>
 
       <div id="kill-feed"></div>
+      <div id="kill-banner" class="hidden"></div>
 
       <div id="hud-center">
         <div id="danger-warning" class="hidden"></div>
+        <div id="recall-bar" class="hidden"><div id="recall-fill"></div></div>
         <div id="respawn-timer" class="hidden"><span id="respawn-text"></span></div>
       </div>
 
+      <!-- Bottom HUD -->
       <div id="bottom-hud">
-        <div id="hero-panel">
-          <div id="hero-portrait" class="fighter-portrait"></div>
-          <div id="hero-bars">
-            <div class="hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
-            <span class="hp-text" id="hp-text">1200 / 1200</span>
+        <div id="left-panel">
+          <div id="hero-portrait-wrap">
+            <div id="hero-portrait"></div>
+            <span id="hero-level">1</span>
           </div>
+          <div id="hero-bars">
+            <div class="bar hp-bar-wrap"><div class="hp-bar-fill" id="hp-bar"></div></div>
+            <div class="bar mana-bar-wrap"><div class="mana-bar-fill" id="mana-bar"></div></div>
+            <span class="bar-text" id="hp-text">HP</span>
+          </div>
+          <button class="utility-btn" id="shop-btn">🛒</button>
+          <button class="utility-btn" id="recall-btn">🏠</button>
         </div>
 
         <div id="controls">
@@ -82,34 +89,50 @@
             <div id="joystick-base"><div id="joystick-knob"></div></div>
           </div>
           <div id="skill-buttons">
-            <button class="skill-btn" id="skill2-btn">S2</button>
-            <button class="skill-btn" id="skill1-btn">S1</button>
-            <button class="skill-btn attack" id="attack-btn">⚔</button>
+            <button class="skill-btn skill2" id="skill2-btn"><span class="skill-label">S2</span></button>
+            <button class="skill-btn skill1" id="skill1-btn"><span class="skill-label">S1</span></button>
+            <button class="skill-btn attack" id="attack-btn"><span class="skill-label">⚔</span></button>
           </div>
         </div>
+
+        <div id="gold-panel">
+          <span class="gold-icon">🪙</span>
+          <span id="gold-text">500</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shop overlay -->
+    <div id="shop-overlay" class="hidden">
+      <div class="shop-panel">
+        <h3>ITEM SHOP</h3>
+        <div id="shop-items"></div>
+        <button class="btn btn-secondary" id="shop-close">Close</button>
       </div>
     </div>
 
     <div id="damage-flash" class="hidden"></div>
     <div id="death-overlay" class="hidden">
       <div class="death-card">
-        <h2>YOU DIED</h2>
-        <p id="death-killer">Killed by: Unknown</p>
+        <h2>DEFEATED</h2>
+        <p id="death-killer"></p>
         <p id="death-tip" class="death-tip"></p>
-        <button class="btn btn-secondary" id="death-dismiss">OK</button>
+        <button class="btn btn-secondary" id="death-dismiss">Continue</button>
       </div>
     </div>
     <div id="match-end-overlay" class="hidden">
       <h2 id="match-result"></h2>
-      <button class="btn" id="back-lobby-btn">Back to Lobby</button>
+      <p id="match-result-sub"></p>
+      <button class="btn btn-gold" id="back-lobby-btn">Back to Lobby</button>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="/js/network.js?v=5"></script>
-  <script src="/js/input.js?v=5"></script>
-  <script src="/js/renderer.js?v=5"></script>
-  <script src="/js/lobby.js?v=6"></script>
-  <script src="/js/game.js?v=5"></script>
+  <script src="/js/heroes.js?v=7"></script>
+  <script src="/js/network.js?v=7"></script>
+  <script src="/js/input.js?v=7"></script>
+  <script src="/js/renderer.js?v=7"></script>
+  <script src="/js/lobby.js?v=7"></script>
+  <script src="/js/game.js?v=7"></script>
 </body>
 </html>

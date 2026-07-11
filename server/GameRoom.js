@@ -3,37 +3,7 @@ const Team = {
   RED: 'red'
 };
 
-const HeroType = {
-  FIGHTER: 'fighter',
-  MAGE: 'mage'
-};
-
-const HERO_STATS = {
-  [HeroType.FIGHTER]: {
-    maxHp: 1200,
-    moveSpeed: 4.2,
-    attackDamage: 65,
-    attackRange: 2.2,
-    attackCooldown: 0.8,
-    skill1Damage: 120,
-    skill1Cooldown: 6,
-    skill2Damage: 80,
-    skill2Cooldown: 10,
-    color: '#4a90d9'
-  },
-  [HeroType.MAGE]: {
-    maxHp: 900,
-    moveSpeed: 3.8,
-    attackDamage: 45,
-    attackRange: 5.5,
-    attackCooldown: 1.0,
-    skill1Damage: 150,
-    skill1Cooldown: 5,
-    skill2Damage: 200,
-    skill2Cooldown: 12,
-    color: '#9b59b6'
-  }
-};
+const { HeroType, HERO_STATS, SHOP_ITEMS } = require('./heroes');
 
 const MAP = {
   width: 90,
@@ -64,6 +34,8 @@ const TICK_RATE = 20;
 const BROADCAST_RATE = 12;
 const MINION_WAVE_INTERVAL = 25;
 const RESPAWN_TIME = 8;
+const RECALL_TIME = 4;
+const RECALL_COOLDOWN = 60;
 const MAX_PLAYERS = 4;
 const BOT_NAMES = ['Bot Layla', 'Bot Franco', 'Bot Eudora', 'Bot Aldous'];
 
@@ -212,7 +184,9 @@ class GameRoom {
     while (this.players.size < MAX_PLAYERS) {
       const botId = `bot_${++this.idCounter}`;
       const team = this._assignTeam();
-      const heroType = botIndex % 2 === 0 ? HeroType.FIGHTER : HeroType.MAGE;
+      const heroType = botIndex % 4 === 0 ? HeroType.FIGHTER
+        : botIndex % 4 === 1 ? HeroType.MAGE
+        : botIndex % 4 === 2 ? HeroType.ASSASSIN : HeroType.MARKSMAN;
       this.players.set(botId, {
         id: botId,
         name: BOT_NAMES[botIndex % BOT_NAMES.length],
@@ -260,17 +234,26 @@ class GameRoom {
       x: spawn.x,
       y: spawn.y,
       lane: spawn.lane,
+      level: 1,
       maxHp: stats.maxHp,
       hp: stats.maxHp,
+      maxMana: stats.maxMana,
+      mana: stats.maxMana,
       moveSpeed: stats.moveSpeed,
+      baseMoveSpeed: stats.moveSpeed,
       attackDamage: stats.attackDamage,
+      baseAttackDamage: stats.attackDamage,
+      skillBonus: 0,
       attackRange: stats.attackRange,
       attackCooldown: stats.attackCooldown,
       attackCooldownLeft: 0,
       skill1CooldownLeft: 0,
       skill2CooldownLeft: 0,
+      recallChannel: 0,
+      recallCooldownLeft: 0,
+      items: [],
       slot: player.slot,
-      gold: 300,
+      gold: 500,
       kills: 0,
       deaths: 0,
       alive: true,
@@ -283,11 +266,57 @@ class GameRoom {
   handleInput(playerId, input) {
     const hero = this.entities.heroes.find((h) => h.playerId === playerId && h.alive);
     if (!hero) return;
+    if (hero.recallChannel > 0) return;
+
     hero.input.dx = clamp(input.dx ?? 0, -1, 1);
     hero.input.dy = clamp(input.dy ?? 0, -1, 1);
     if (input.attack) this._heroAttack(hero);
     if (input.skill1) this._heroSkill(hero, 1);
     if (input.skill2) this._heroSkill(hero, 2);
+    if (input.recall) this._startRecall(hero);
+  }
+
+  buyItem(playerId, itemId) {
+    const hero = this.entities.heroes.find((h) => h.playerId === playerId && h.alive);
+    const item = SHOP_ITEMS[itemId];
+    if (!hero || !item || hero.items.includes(itemId)) return false;
+    if (hero.gold < item.cost) return false;
+
+    hero.gold -= item.cost;
+    hero.items.push(itemId);
+    if (item.hp) { hero.maxHp += item.hp; hero.hp += item.hp; }
+    if (item.attack) hero.attackDamage += item.attack;
+    if (item.skill) hero.skillBonus += item.skill;
+    if (item.speed) hero.moveSpeed += item.speed;
+    return true;
+  }
+
+  _startRecall(hero) {
+    if (hero.recallCooldownLeft > 0 || hero.recallChannel > 0) return;
+    hero.recallChannel = RECALL_TIME;
+    hero.input.dx = 0;
+    hero.input.dy = 0;
+  }
+
+  _completeRecall(hero) {
+    const player = this.players.get(hero.playerId);
+    if (!player) return;
+    const spawn = SPAWN_POINTS[player.team][0];
+    hero.x = spawn.x;
+    hero.y = spawn.y;
+    hero.hp = hero.maxHp;
+    hero.mana = hero.maxMana;
+    hero.recallChannel = 0;
+    hero.recallCooldownLeft = RECALL_COOLDOWN;
+  }
+
+  _getTeamKills() {
+    const kills = { blue: 0, red: 0 };
+    for (const h of this.entities.heroes) {
+      if (h.team === Team.BLUE) kills.blue += h.kills;
+      else kills.red += h.kills;
+    }
+    return kills;
   }
 
   _heroAttack(hero) {
@@ -301,15 +330,17 @@ class GameRoom {
   _heroSkill(hero, skillNum) {
     const stats = HERO_STATS[hero.heroType];
     if (skillNum === 1) {
-      if (hero.skill1CooldownLeft > 0) return;
+      if (hero.skill1CooldownLeft > 0 || hero.mana < 80) return;
       const target = this._findTarget(hero, hero.attackRange + 2, hero.team);
-      if (target) this._dealDamage(hero, target, stats.skill1Damage);
+      if (target) this._dealDamage(hero, target, stats.skill1Damage + hero.skillBonus);
       hero.skill1CooldownLeft = stats.skill1Cooldown;
+      hero.mana = Math.max(0, hero.mana - 80);
     } else if (skillNum === 2) {
-      if (hero.skill2CooldownLeft > 0) return;
+      if (hero.skill2CooldownLeft > 0 || hero.mana < 120) return;
       const enemies = this._enemiesInRadius(hero, 4, hero.team);
-      for (const e of enemies) this._dealDamage(hero, e, stats.skill2Damage);
+      for (const e of enemies) this._dealDamage(hero, e, stats.skill2Damage + hero.skillBonus);
       hero.skill2CooldownLeft = stats.skill2Cooldown;
+      hero.mana = Math.max(0, hero.mana - 120);
     }
   }
 
@@ -428,13 +459,22 @@ class GameRoom {
     for (const hero of this.entities.heroes) {
       if (hero.alive) {
         const player = this.players.get(hero.playerId);
-        if (player?.isBot) {
-          this._updateBot(hero, dt);
+        if (player?.isBot) this._updateBot(hero, dt);
+
+        if (hero.recallChannel > 0) {
+          hero.recallChannel -= dt;
+          hero.input.dx = 0;
+          hero.input.dy = 0;
+          if (hero.recallChannel <= 0) this._completeRecall(hero);
+        } else {
+          this._moveHero(hero, dt);
         }
-        this._moveHero(hero, dt);
+
+        hero.mana = Math.min(hero.maxMana, hero.mana + 15 * dt);
         hero.attackCooldownLeft = Math.max(0, hero.attackCooldownLeft - dt);
         hero.skill1CooldownLeft = Math.max(0, hero.skill1CooldownLeft - dt);
         hero.skill2CooldownLeft = Math.max(0, hero.skill2CooldownLeft - dt);
+        hero.recallCooldownLeft = Math.max(0, hero.recallCooldownLeft - dt);
       } else {
         hero.respawnTimer -= dt;
         if (hero.respawnTimer <= 0) this._respawnHero(hero);
@@ -456,6 +496,7 @@ class GameRoom {
   _moveHero(hero, dt) {
     const len = Math.hypot(hero.input.dx, hero.input.dy);
     if (len < 0.01) return;
+    if (hero.recallChannel > 0) { hero.recallChannel = 0; }
     const nx = hero.input.dx / len;
     const ny = hero.input.dy / len;
     hero.x = clamp(hero.x + nx * hero.moveSpeed * dt, 1, MAP.width - 1);
@@ -641,6 +682,7 @@ class GameRoom {
       started: this.started,
       finished: this.finished,
       winner: this.winner,
+      teamKills: this._getTeamKills(),
       heroes: this.entities.heroes.map((h) => ({
         id: h.id,
         playerId: h.playerId,
@@ -649,14 +691,20 @@ class GameRoom {
         team: h.team,
         x: h.x,
         y: h.y,
+        level: h.level,
         hp: h.hp,
         maxHp: h.maxHp,
+        mana: h.mana,
+        maxMana: h.maxMana,
         attackRange: h.attackRange,
         alive: h.alive,
         respawnTimer: h.respawnTimer,
+        recallChannel: h.recallChannel,
+        recallCooldownLeft: h.recallCooldownLeft,
         gold: h.gold,
         kills: h.kills,
         deaths: h.deaths,
+        items: h.items,
         color: h.color,
         attackCooldownLeft: h.attackCooldownLeft,
         skill1CooldownLeft: h.skill1CooldownLeft,
@@ -696,6 +744,7 @@ module.exports = {
   Team,
   HeroType,
   HERO_STATS,
+  SHOP_ITEMS,
   MAP,
   TICK_RATE,
   BROADCAST_RATE

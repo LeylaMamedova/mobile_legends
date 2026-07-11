@@ -53,6 +53,10 @@ class NetworkClient {
   sendInput(input) {
     this.send('input', input);
   }
+
+  buyItem(itemId) {
+    this.send('buy_item', { itemId });
+  }
 }
 
 window.NetworkClient = NetworkClient;

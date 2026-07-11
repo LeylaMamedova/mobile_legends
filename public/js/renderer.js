@@ -267,8 +267,10 @@ class GameRenderer {
     const g = new THREE.Group();
     const isBlue = hero.team === 'blue';
     const isMage = hero.heroType === 'mage';
-    const primary = isMage ? 0x9b59b6 : (isBlue ? MLBB.blue : MLBB.red);
-    const dark = isMage ? 0x6c3483 : (isBlue ? MLBB.blueDark : MLBB.redDark);
+    const isAssassin = hero.heroType === 'assassin';
+    const isMarksman = hero.heroType === 'marksman';
+    const primary = isMage ? 0x9b59b6 : isAssassin ? 0x6c5ce7 : isMarksman ? 0xe17055 : (isBlue ? MLBB.blue : MLBB.red);
+    const dark = isMage ? 0x6c3483 : isAssassin ? 0x2d3436 : isMarksman ? 0xc0392b : (isBlue ? MLBB.blueDark : MLBB.redDark);
 
     const aura = new THREE.Mesh(
       new THREE.RingGeometry(1.0, 1.3, 32),
@@ -318,18 +320,18 @@ class GameRenderer {
     cape.position.set(0, 1.3, -0.35);
     cape.rotation.x = 0.15;
 
-    if (isMage) {
+    if (isMage || isMarksman) {
       const staff = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.06, 0.08, 2.4, 6),
+        new THREE.CylinderGeometry(0.06, 0.08, isMarksman ? 2.0 : 2.4, 6),
         new THREE.MeshStandardMaterial({ color: 0xdaa520, metalness: 0.6 })
       );
       staff.position.set(0.8, 1.6, 0);
       staff.rotation.z = -0.2;
       const orb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.25, 8, 8),
-        new THREE.MeshStandardMaterial({ color: 0xcc66ff, emissive: 0xaa44ff, emissiveIntensity: 1 })
+        new THREE.SphereGeometry(0.22, 8, 8),
+        new THREE.MeshStandardMaterial({ color: isMarksman ? 0xffaa00 : 0xcc66ff, emissive: isMarksman ? 0xff8800 : 0xaa44ff, emissiveIntensity: 1 })
       );
-      orb.position.set(0.95, 2.6, 0);
+      orb.position.set(0.95, isMarksman ? 2.4 : 2.6, 0);
       g.add(staff, orb);
     } else {
       const sword = new THREE.Mesh(
