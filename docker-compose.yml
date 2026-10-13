@@ -1,0 +1,10 @@
+services:
+  mobile-legends:
+    build: .
+    container_name: mobile-legends
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+    ports:
+      - "127.0.0.1:3001:3001"
+    mem_limit: 512m
